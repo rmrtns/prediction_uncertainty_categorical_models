@@ -1,0 +1,18 @@
+{
+    "creators": [
+        {
+            "orcid": "0000-0003-4632-6412",
+            "affiliation": "Zuyderland MC",
+            "name": "Remy J.H. Martens"
+        },
+        {
+            "orcid": "0000-0003-2676-7448",
+            "affiliation": "Maastricht University Medical Centre+",
+            "name": "William P.T.M. van Doorn"
+        }
+    ],
+
+    "license": "GPL-3.0",
+
+    "title": "Prediction uncertainty of categorical prediction models"
+}
