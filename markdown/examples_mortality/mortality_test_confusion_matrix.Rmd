@@ -1,0 +1,142 @@
+---
+title: "Mortality: Validate the use of confusion matrix derived measures based on aggregate confusion matrix as measure for the average results based on individual predictions"
+output: html_document
+date: "2024-04-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(xgboost)
+library(pROC)
+library(caret)
+library(dplyr) # load after xgboost to prevent masking slice function from dplyr
+library(rmarkdown)
+```
+
+## Import functions and variables.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+source('src/variables.R', local = variables <- new.env())
+source('src/simulate_variation.R', local = variation <- new.env())
+source('src/simulate_discordance.R', local = discordance <- new.env())
+source('src/confusion_matrix.R', local = confusion <- new.env())
+```
+
+## Import data.
+```{r}
+validation_intern <- read.csv('data/selected_variables_validation_intern_db.csv')
+```
+
+## Import model.
+```{r}
+clf <- xgb.load('out/mortality/model/2024_01_15_11_58_xgboost.model')
+```
+
+## Import data.
+```{r, echo=FALSE}
+test_confusion_matrix_aggregate_results <- read.csv("out/mortality/simulations_discordance_aggregate_results/mortality_test_auroc_aggregate_results.csv")
+
+test_confusion_matrix_aggregate_results <- left_join(validation_intern %>% select("id", "X1m.mortality"), test_confusion_matrix_aggregate_results, by = "id")
+```
+
+## Define cut-off.
+CUT_OFF = 0.18
+
+## Reconstruct confusion matrix.
+
+- Based on percentage_TRUE:
+```{r, echo=FALSE}
+print(
+  confusion$calculate_average_confusion_matrix_from_aggregate_results(
+    test_confusion_matrix_aggregate_results, 
+    "percentage_TRUE", 
+    "X1m.mortality", 
+    "1"
+  )
+)
+```
+
+## Read individual results.
+```{r, echo=FALSE}
+list_of_files <- list.files('out/mortality/simulations_discordance_individual_results/simulations_discordance_individual_results_validation_intern_test_auroc/', pattern = '.rds', recursive = TRUE, full.names = TRUE)
+
+read_files <- function(directory){
+  file <- readRDS(directory)
+  outcome <- file %>% 
+    select(id, simulation_index, continuous_prediction) %>%
+    pivot_wider(
+      names_from = simulation_index,
+      values_from = continuous_prediction,
+      names_prefix = "prediction_"
+    )
+}
+
+list_of_individual_dbs <- lapply(list_of_files, read_files)
+
+combined_dbs <- bind_rows(list_of_individual_dbs)
+
+combined_dbs_with_outcome <- left_join(
+  validation_intern %>% select(id, X1m.mortality),
+  combined_dbs,
+  by = "id")
+```
+
+## Confusion matrix derived measures based on mean of results of individual simulations.
+```{r, echo=FALSE}
+summarise_confusion_matrix_derived_measures <- function(data){
+  continuous_prediction <- data %>% select(-c(id, X1m.mortality))
+  continuous_prediction <- as.vector(continuous_prediction)
+  list_of_confusion_matrix_derived_measures <- list()
+  for (prediction in 1:length(continuous_prediction)){
+    subsample_prediction <- paste0("prediction_", prediction)
+    subsample <- data %>% select(X1m.mortality, !!sym(subsample_prediction))
+    list_of_confusion_matrix_derived_measures[[prediction]] <- 
+      confusion$calculate_confusion_matrix(subsample, "X1m.mortality", subsample_prediction, 0.18)
+  }
+  return(bind_rows(list_of_confusion_matrix_derived_measures))
+}
+
+confusion_matrix_derived_measures_per_simulation_index <- summarise_confusion_matrix_derived_measures(
+  combined_dbs_with_outcome
+)
+
+means_of_derived_measures_individual_simulations <- confusion_matrix_derived_measures_per_simulation_index %>%
+  summarise_all(mean) %>%
+  pivot_longer(cols = everything()) %>%
+  rename(mean_individual_simulations = value)
+```
+
+## Confusion matrix derived measures based on mean percentage_TRUE.
+```{r, echo=FALSE}
+confusion_matrix_aggregate_results <- confusion$calculate_average_confusion_matrix_from_aggregate_results(
+  test_confusion_matrix_aggregate_results, 
+  "percentage_TRUE", 
+  "X1m.mortality", 
+  "1"
+)
+
+confusion_matrix_derived_measures_aggregate_results <- 
+  confusion$calculate_confusion_matrix_derived_measures(
+    confusion_matrix_aggregate_results, 
+    "1"
+  )
+
+confusion_matrix_derived_measures_aggregate_results <- confusion_matrix_derived_measures_aggregate_results %>%
+  pivot_longer(cols = everything()) %>%
+  rename(mean_aggregate_results = value)
+```
+
+## Comparison of results.
+
+```{r, echo=FALSE, print.rows = 20}
+paged_table(left_join(means_of_derived_measures_individual_simulations,
+                      confusion_matrix_derived_measures_aggregate_results,
+                      by = "name"))
+```
+
+Results of both approaches are virtually similar. The minor differences in specificity and positive predictive value are most likely due to differences in rounding and do not affect the interpretation of results. Therefore, these findings confirm the use of calculation of confusion matrix derived measures based on percentage_TRUE.

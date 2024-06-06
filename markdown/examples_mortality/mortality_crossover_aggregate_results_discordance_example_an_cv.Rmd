@@ -1,0 +1,156 @@
+---
+title: "Mortality: Impact of discordant predictions on crossover within confusion matrices based on simulations_discordance_aggregate_results for analytical variation"
+output: html_document
+date: "2024-04-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(DT)
+library(tidyr)
+library(purrr)
+```
+
+## Set main parameters.
+```{r}
+parameters <- new.env()
+parameters$original_data <- read.csv('data/selected_variables_egfr_validation_extern_db.csv')
+parameters$identifier <- "id"
+parameters$model_mean_continuous_prediction <- "continuous_prediction_mean"
+parameters$model_outcome <- "X1m.mortality"
+parameters$model_outcome_class_TRUE <-  "1" 
+parameters$model_prediction_class_TRUE <-  "percentage_TRUE"
+parameters$bootstrap_number_of_samples <- 10000
+parameters$bootstrap_confidence_level <- 0.95
+parameters$bootstrap_methods <- c("norm", "perc", "bca")
+parameters$path_and_name_combined_stats <- 'out/mortality/simulations_crossover_aggregate_results/mortality_crossover_validation_extern_an_cv_combined_stats.csv'
+```
+
+```{r, echo=FALSE}
+## Create list of confusion_matrix_measures.
+list_of_crossover_measures <- list()
+```
+
+## Set parameters an_cv_base.
+```{r}
+parameters$cv_indicator <- "an_cv_base"
+parameters$aggregate_discordance_data <- read.csv('out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_an_cv_base.csv')
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_crossover_aggregate_results/mortality_crossover_validation_extern_an_cv_base_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_crossover.Rmd'}
+
+```
+
+```{r, echo=FALSE}
+list_of_crossover_measures[[parameters$cv_indicator]] <- 
+  crossover_measures
+remove(crossover_measures)
+```
+
+## Set parameters an_cv_1dot5.
+```{r}
+parameters$cv_indicator <- "an_cv_1dot5"
+parameters$aggregate_discordance_data <- read.csv('out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_an_cv_1dot5.csv')
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_crossover_aggregate_results/mortality_crossover_validation_extern_an_cv_1dot5_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_crossover.Rmd'}
+
+```
+
+```{r, echo=FALSE}
+list_of_crossover_measures[[parameters$cv_indicator]] <- 
+  crossover_measures
+remove(crossover_measures)
+```
+
+## Set parameters an_cv_2.
+```{r}
+parameters$cv_indicator <- "an_cv_2"
+parameters$aggregate_discordance_data <- read.csv('out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_an_cv_2.csv')
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_crossover_aggregate_results/mortality_crossover_validation_extern_an_cv_2_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_crossover.Rmd'}
+
+```
+
+```{r, echo=FALSE}
+list_of_crossover_measures[[parameters$cv_indicator]] <- 
+  crossover_measures
+remove(crossover_measures)
+```
+
+## Set parameters an_cv_4.
+```{r}
+parameters$cv_indicator <- "an_cv_4"
+parameters$aggregate_discordance_data <- read.csv('out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_an_cv_4.csv')
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_crossover_aggregate_results/mortality_crossover_validation_extern_an_cv_4_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_crossover.Rmd'}
+
+```
+
+```{r, echo=FALSE}
+list_of_crossover_measures[[parameters$cv_indicator]] <- 
+  crossover_measures
+remove(crossover_measures)
+```
+
+## Set parameters an_cv_6.
+```{r}
+parameters$cv_indicator <- "an_cv_6"
+parameters$aggregate_discordance_data <- read.csv('out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_an_cv_6.csv')
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_crossover_aggregate_results/mortality_crossover_validation_extern_an_cv_6_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_crossover.Rmd'}
+
+```
+
+```{r, echo=FALSE}
+list_of_crossover_measures[[parameters$cv_indicator]] <- 
+  crossover_measures
+remove(crossover_measures)
+```
+
+## Summarise crossover by cv level.
+```{r, echo=FALSE}
+crossover_measures_combined <- 
+  list_of_crossover_measures %>%
+  reduce(left_join, by = "name")
+
+write.csv(
+  crossover_measures_combined,
+  parameters$path_and_name_combined_stats,
+  row.names = FALSE
+)
+
+datatable(
+  crossover_measures_combined,
+  rownames = FALSE,
+  extensions = list("FixedColumns" = NULL),
+  options = list(
+    dom = "t",
+    pageLength = 20,
+    scrollX = TRUE,
+    fixedColumns = TRUE
+  ) 
+) %>%
+  formatRound(
+    names(crossover_measures_combined)[-1],
+    digits = 4
+  ) %>%
+  formatStyle(
+    names(crossover_measures_combined),
+    lineHeight = "80%"
+  )
+```

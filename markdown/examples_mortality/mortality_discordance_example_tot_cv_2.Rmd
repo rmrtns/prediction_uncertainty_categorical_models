@@ -1,0 +1,49 @@
+---
+title: "Mortality: Discordant predictions related to total variation with base biological cv and 2x base analytical cv"
+output: html_document
+date: "2024-04-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(xgboost)
+```
+
+## Import functions and variables.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+source('src/variables.R', local = variables <- new.env())
+source('src/predict_mortality.R', local = mortality <- new.env())
+```
+
+## Set parameters.
+```{r}
+parameters <- new.env()
+parameters$data <- read.csv('data/selected_variables_validation_extern_db.csv')
+parameters$identifier <- "id"
+parameters$continuous_prediction_function <- mortality$get_continuous_prediction_mortality
+parameters$categorical_prediction_function <- mortality$get_categorical_prediction_mortality
+parameters$model <- xgb.load('out/mortality/model/2024_01_15_11_58_xgboost.model')
+parameters$model_variables <- variables$selected_variables
+parameters$model_outcome <- "X1m.mortality"
+parameters$model_cut_off <- 0.18
+parameters$uncertain_variables <- variables$selected_variables[variables$uncertain_variables_indicator]
+parameters$correlation <- NA
+parameters$biological_cv <- variables$biological_cv_percent[variables$uncertain_variables_indicator]
+parameters$analytical_cv <- 2 * variables$analytical_cv_percent[variables$uncertain_variables_indicator]
+parameters$simulation_number_of_samples <- 100000
+parameters$bootstrap_number_of_samples <- 10000
+parameters$bootstrap_confidence_level <- 0.95
+parameters$bootstrap_methods <- c("norm", "perc", "bca")
+parameters$path_and_name_aggregate_results <- 'out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_tot_cv_2.csv'
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_tot_cv_2_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_discordance.Rmd'}
+
+```

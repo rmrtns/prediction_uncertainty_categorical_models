@@ -1,0 +1,81 @@
+---
+title: "Validate XGBoost Model"
+output:
+  html_document: default
+  pdf_document: default
+date: "2023-04-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(1)
+```
+
+## Load libraries
+```{r include=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(xgboost)
+library(pROC)
+library(ggplot2)
+library(caret)
+```
+
+## Import model.
+```{r}
+clf <- xgb.load('out/mortality/model/2024_01_15_11_58_xgboost.model')
+```
+
+## Set cut_off.
+```{r}
+cut_off <- 0.18
+```
+
+## Load validation data
+```{r}
+validation_intern <- read.csv('data/selected_variables_validation_intern_db.csv')
+validation_extern <- read.csv('data/selected_variables_validation_extern_db.csv')
+
+print(dim(validation_intern))
+print(dim(validation_extern))
+```
+
+## Evaluate model in validation_intern.
+```{r, echo=FALSE}
+validation_intern_y <- validation_intern$X1m.mortality
+validation_intern_x <- validation_intern %>% select(-c(id, X1m.mortality))
+dvalidation_intern <- xgb.DMatrix(
+  data = as.matrix(validation_intern_x), 
+  label = validation_intern_y
+)
+
+validation_intern_predictions <- predict(clf, dvalidation_intern)
+
+validation_intern_roc_obj <- roc(
+  validation_intern_y, 
+  validation_intern_predictions
+)
+print(auc(validation_intern_roc_obj))
+
+print(confusionMatrix(as.factor(as.numeric(validation_intern_predictions > cut_off)), as.factor(validation_intern_y), positive='1'))
+```
+
+## Evaluate model in validation_extern.
+```{r, echo=FALSE}
+validation_extern_y <- validation_extern$X1m.mortality
+validation_extern_x <- validation_extern %>% select(-c(id, X1m.mortality))
+dvalidation_extern <- xgb.DMatrix(
+  data = as.matrix(validation_extern_x), 
+  label = validation_extern_y
+)
+
+validation_extern_predictions <- predict(clf, dvalidation_extern)
+
+validation_extern_roc_obj <- roc(
+  validation_extern_y, 
+  validation_extern_predictions
+)
+print(auc(validation_extern_roc_obj))
+
+print(confusionMatrix(as.factor(as.numeric(validation_extern_predictions > cut_off)), as.factor(validation_extern_y), positive='1'))
+```

@@ -1,0 +1,124 @@
+---
+title: "eGFR: Plots of discordant predictions"
+output: html_document
+date: "2024-05-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries
+```{r include=FALSE, warning=FALSE, message=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+```
+
+## Import functions and variables.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+source('src/manuscript.R', local = manuscript <- new.env())
+```
+
+## Load discordance data validation_extern stats_with_ci.
+```{r, echo=FALSE}
+list_of_files_discordance <- 
+  list.files(
+    'out/egfr/simulations_discordance_aggregate_results/', 
+    pattern = 'validation_extern_((bio_cv_|an_cv_|tot_cv_)(base|1dot5|\\d))_stats_with_ci.csv', 
+    recursive = TRUE, 
+    full.names = TRUE
+  )
+
+discordance_validation_extern_stats_with_ci <- bind_rows(
+  lapply(list_of_files_discordance, manuscript$read_files)
+) 
+  
+discordance_validation_extern_stats_with_ci <- manuscript$tidy_data(
+  discordance_validation_extern_stats_with_ci
+)
+```
+
+## Create plots for discordance data validation extern.
+### Plot p97.5 of percentage discordant.
+```{r, echo=FALSE}
+plot_discordance_p97.5 <- manuscript$get_plot_by_cv_level(
+  discordance_validation_extern_stats_with_ci,
+  "percentage_discordant_p97.5",
+  "p97.5 of percentage discordant (%)",
+  c(0, 50)
+)
+
+plot_discordance_p97.5
+```
+
+### Plot percentage_discordant_above_05.
+```{r, echo=FALSE}
+plot_discordance_above_05 <- manuscript$get_plot_by_cv_level(
+  discordance_validation_extern_stats_with_ci,
+  "percentage_discordant_above_05",
+  "percentage discordant >5% (%)",
+  c(0, 25)
+)
+
+plot_discordance_above_05
+```
+
+### Plot probability discordant.
+```{r, echo=FALSE}
+plot_probability_discordant <- manuscript$get_plot_by_cv_level(
+  discordance_validation_extern_stats_with_ci,
+  "probability_discordant",
+  "Probability discordant prediction (%)",
+  c(0, 5)
+)
+
+plot_probability_discordant
+```
+
+### Combined plot.
+```{r, echo=FALSE}
+plot_1 <- ggarrange(
+  plotlist = list(plot_discordance_p97.5, plot_probability_discordant),
+  ncol = 2,
+  common.legend = TRUE,
+  labels = "AUTO"
+)
+
+plot_1
+
+ggsave(
+  filename = "egfr_figure_discordance.tiff",
+  plot = plot_1,
+  path = "manuscript/plots/",
+  width = 176,
+  height = 105,
+  units = "mm",
+  compression = "lzw"
+)
+```
+
+### Combined plot.
+```{r, echo=FALSE}
+plot_2 <- ggarrange(
+  plotlist = list(plot_discordance_above_05, plot_probability_discordant),
+  ncol = 2,
+  common.legend = TRUE,
+  labels = "AUTO"
+)
+
+plot_2
+
+ggsave(
+  filename = "egfr_figure_discordance_dichotomised.tiff",
+  plot = plot_2,
+  path = "manuscript/plots/",
+  width = 176,
+  height = 105,
+  units = "mm",
+  compression = "lzw"
+)
+```

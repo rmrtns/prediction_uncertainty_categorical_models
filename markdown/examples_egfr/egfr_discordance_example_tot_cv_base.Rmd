@@ -1,0 +1,49 @@
+---
+title: "eGFR: Discordant predictions related to total variation with base biological cv and base analytical cv"
+output: html_document
+date: "2024-04-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(xgboost)
+```
+
+## Import functions and variables.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+source('src/variables.R', local = variables <- new.env())
+source('src/predict_egfr.R', local = egfr <- new.env())
+```
+
+## Set parameters.
+```{r}
+parameters <- new.env()
+parameters$data <- read.csv('data/selected_variables_egfr_validation_extern_db.csv')
+parameters$identifier <- "id"
+parameters$continuous_prediction_function <- egfr$get_continuous_prediction_egfr
+parameters$categorical_prediction_function <- egfr$get_categorical_prediction_egfr
+parameters$model <- NA
+parameters$model_variables <- variables$selected_variables_egfr
+parameters$model_outcome <- "CKDESE"
+parameters$model_cut_off <- 60
+parameters$uncertain_variables <- variables$selected_variables_egfr[variables$uncertain_variables_indicator_egfr]
+parameters$correlation <- NA
+parameters$biological_cv <- variables$biological_cv_percent_egfr[variables$uncertain_variables_indicator_egfr]
+parameters$analytical_cv <- variables$analytical_cv_percent_egfr[variables$uncertain_variables_indicator_egfr]
+parameters$simulation_number_of_samples <- 100000
+parameters$bootstrap_number_of_samples <- 10000
+parameters$bootstrap_confidence_level <- 0.95
+parameters$bootstrap_methods <- c("norm", "perc", "bca")
+parameters$path_and_name_aggregate_results <- 'out/egfr/simulations_discordance_aggregate_results/egfr_discordance_validation_extern_tot_cv_base.csv'
+parameters$path_and_name_stats_with_ci <- 'out/egfr/simulations_discordance_aggregate_results/egfr_discordance_validation_extern_tot_cv_base_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_discordance.Rmd'}
+
+```

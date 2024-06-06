@@ -1,0 +1,3 @@
+# The following folders are ignored by renv:
+data/
+out/

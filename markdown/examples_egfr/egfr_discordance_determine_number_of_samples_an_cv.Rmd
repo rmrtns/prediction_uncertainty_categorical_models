@@ -1,0 +1,269 @@
+---
+title: "eGFR: Determine number of simulations for monte carlo simulation of discordant predictions for analytical variation"
+output: html_document
+date: "2024-04-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 240)
+```
+
+## Load libraries.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(xgboost)
+library(caret)
+library(dplyr) # load after xgboost to prevent masking slice function from dplyr
+# library(plyr) rdply called with :: to prevent masking dplyr functions
+library(rmarkdown)
+```
+
+## Import functions and variables.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+source('src/variables.R', local = variables <- new.env())
+source('src/predict_egfr.R', local = egfr <- new.env())
+source('src/simulate_discordance.R', local = discordance <- new.env())
+```
+
+## Import data.
+```{r}
+validation_intern <- read.csv('data/selected_variables_egfr_validation_intern_db.csv')
+```
+
+## Select subpopulation for simulations (stratified random split).
+```{r, echo=FALSE}
+validation_intern <- validation_intern %>%
+  mutate(egfr_below_60 = CKDESE < 60)
+
+split_index <- createDataPartition(validation_intern[["egfr_below_60"]], p = 0.025, list = FALSE)
+
+write.csv(
+  validation_intern[split_index,],
+  'data/selected_variables_egfr_validation_intern_validate_nr_samples.csv',
+  row.names = FALSE
+)
+
+validation_intern_check_nr_samples <- read.csv('data/selected_variables_egfr_validation_intern_validate_nr_samples.csv')
+```
+
+## Generate common variables.
+```{r, echo=FALSE}
+uncertain_variables <-
+  variables$selected_variables_egfr[variables$uncertain_variables_indicator_egfr]
+an_cv_base <-
+  variables$analytical_cv_percent_egfr[variables$uncertain_variables_indicator_egfr]
+```
+
+## Perform simulations.
+```{r, echo=FALSE}
+find_patients_with_likely_resampling <-  discordance$simulate_variation_induced_discordance(
+  validation_intern_check_nr_samples,
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  10000,
+  egfr$get_continuous_prediction_egfr,
+  egfr$get_categorical_prediction_egfr,
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+)
+
+patients_with_none_zero_percentage_true <- find_patients_with_likely_resampling %>% filter(percentage_TRUE > 0)
+
+patients_with_likely_resampling <- validation_intern_check_nr_samples %>% 
+  filter(id %in% patients_with_none_zero_percentage_true[["id"]])
+
+simulated_discordance_10 <- plyr::rdply(20, discordance$simulate_variation_induced_discordance(
+  patients_with_likely_resampling,   
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  10,
+  egfr$get_continuous_prediction_egfr, 
+  egfr$get_categorical_prediction_egfr, 
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+))
+
+saveRDS(
+  simulated_discordance_10,
+  'out/egfr/simulations_optimisation/egfr_simulated_discordance_10.rds'
+)
+
+simulated_discordance_100 <- plyr::rdply(20, discordance$simulate_variation_induced_discordance(
+  patients_with_likely_resampling,   
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  100,
+  egfr$get_continuous_prediction_egfr, 
+  egfr$get_categorical_prediction_egfr, 
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+))
+
+saveRDS(
+  simulated_discordance_100,
+  'out/egfr/simulations_optimisation/egfr_simulated_discordance_100.rds'
+)
+
+simulated_discordance_1k <- plyr::rdply(20, discordance$simulate_variation_induced_discordance(
+  patients_with_likely_resampling,   
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  1000,
+  egfr$get_continuous_prediction_egfr, 
+  egfr$get_categorical_prediction_egfr, 
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+))
+
+saveRDS(
+  simulated_discordance_1k,
+  'out/egfr/simulations_optimisation/egfr_simulated_discordance_1k.rds'
+)
+
+simulated_discordance_10k <- plyr::rdply(20, discordance$simulate_variation_induced_discordance(
+  patients_with_likely_resampling,   
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  10000,
+  egfr$get_continuous_prediction_egfr,
+  egfr$get_categorical_prediction_egfr,
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+))
+
+saveRDS(
+  simulated_discordance_10k,
+  'out/egfr/simulations_optimisation/egfr_simulated_discordance_10k.rds'
+)
+
+simulated_discordance_100k <- plyr::rdply(20, discordance$simulate_variation_induced_discordance(
+  patients_with_likely_resampling,   
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  100000,
+  egfr$get_continuous_prediction_egfr, 
+  egfr$get_categorical_prediction_egfr,
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+))
+
+saveRDS(
+  simulated_discordance_100k,
+  'out/egfr/simulations_optimisation/egfr_simulated_discordance_100k.rds'
+)
+
+simulated_discordance_1m <- plyr::rdply(20, discordance$simulate_variation_induced_discordance(
+  patients_with_likely_resampling,   
+  "id",
+  uncertain_variables,
+  correlation = NA,
+  an_cv_base,
+  1000000,
+  egfr$get_continuous_prediction_egfr,
+  egfr$get_categorical_prediction_egfr,
+  model_variables = variables$selected_variables_egfr,
+  model_cut_off = 60
+))
+
+saveRDS(
+  simulated_discordance_1m,
+  'out/egfr/simulations_optimisation/egfr_simulated_discordance_1m.rds'
+)
+```
+
+- 10 simulations:
+```{r, echo=FALSE, rows.print = 20}
+paged_table(
+  simulated_discordance_10 %>%
+    group_by(id) %>%
+    summarise(
+      mean_percentage_discordant = mean(percentage_discordant),
+      sd_percentage_discordant = sd(percentage_discordant),
+      cv_percentage_discordant = sd(percentage_discordant) / mean(percentage_discordant) * 100
+    ) %>%
+    mutate(across(where(is.numeric), \(x) round(x, 4)))
+)
+```
+
+- 100 simulations:
+```{r, echo=FALSE, rows.print = 20}
+paged_table(
+  simulated_discordance_100 %>%
+    group_by(id) %>%
+    summarise(
+      mean_percentage_discordant = mean(percentage_discordant),
+      sd_percentage_discordant = sd(percentage_discordant),
+      cv_percentage_discordant = sd(percentage_discordant) / mean(percentage_discordant) * 100
+    ) %>%
+    mutate(across(where(is.numeric), \(x) round(x, 4)))
+)
+```
+
+- 1k simulations:
+```{r, echo=FALSE, rows.print = 20}
+paged_table(
+  simulated_discordance_1k %>%
+    group_by(id) %>%
+    summarise(
+      mean_percentage_discordant = mean(percentage_discordant),
+      sd_percentage_discordant = sd(percentage_discordant),
+      cv_percentage_discordant = sd(percentage_discordant) / mean(percentage_discordant) * 100
+    ) %>%
+    mutate(across(where(is.numeric), \(x) round(x, 4)))
+)
+```
+
+- 10k simulations:
+```{r, echo=FALSE, rows.print = 20}
+paged_table(
+  simulated_discordance_10k %>%
+    group_by(id) %>%
+    summarise(
+      mean_percentage_discordant = mean(percentage_discordant),
+      sd_percentage_discordant = sd(percentage_discordant),
+      cv_percentage_discordant = sd(percentage_discordant) / mean(percentage_discordant) * 100
+    ) %>%
+    mutate(across(where(is.numeric), \(x) round(x, 4)))
+)
+```
+
+- 100k simulations:
+```{r, echo=FALSE, rows.print = 20}
+paged_table(
+  simulated_discordance_100k %>%
+    group_by(id) %>%
+    summarise(
+      mean_percentage_discordant = mean(percentage_discordant),
+      sd_percentage_discordant = sd(percentage_discordant),
+      cv_percentage_discordant = sd(percentage_discordant) / mean(percentage_discordant) * 100
+    ) %>%
+    mutate(across(where(is.numeric), \(x) round(x, 4)))
+)
+```
+
+- 1m simulations:
+```{r, echo=FALSE, rows.print = 20}
+paged_table(
+  simulated_discordance_1m %>%
+    group_by(id) %>%
+    summarise(
+      mean_percentage_discordant = mean(percentage_discordant),
+      sd_percentage_discordant = sd(percentage_discordant),
+      cv_percentage_discordant = sd(percentage_discordant) / mean(percentage_discordant) * 100
+    ) %>%
+    mutate(across(where(is.numeric), \(x) round(x, 4)))
+)
+```

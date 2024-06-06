@@ -1,0 +1,57 @@
+---
+title: "eGFR: Tables of discordant predictions"
+output: html_document
+date: "2024-04-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries
+```{r include=FALSE, warning=FALSE, message=FALSE}
+library(tidyr)
+library(dplyr)
+```
+
+## Import functions and variables.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+source('src/manuscript.R', local = manuscript <- new.env())
+```
+
+## Load discordance data for validation_extern.
+```{r, echo=FALSE}
+list_of_files_discordance <- 
+  list.files(
+    'out/egfr/simulations_discordance_aggregate_results/', 
+    pattern = 'validation_extern_((bio_cv_|an_cv_|tot_cv_)(base|1dot5|\\d))_stats_with_ci.csv', 
+    recursive = TRUE, 
+    full.names = TRUE
+  )
+
+discordance_validation_extern_stats_with_ci <- bind_rows(
+  lapply(list_of_files_discordance, manuscript$read_files)
+) 
+  
+discordance_validation_extern_stats_with_ci <- manuscript$tidy_data(
+  discordance_validation_extern_stats_with_ci
+)
+```
+
+## Create table for discordance data validation_extern.
+```{r, echo=FALSE}
+discordance_validation_extern_stats_with_ci <- manuscript$combine_stat_with_ci(
+  discordance_validation_extern_stats_with_ci,
+  "bca_conf_low",
+  "bca_conf_high",
+  1
+)
+
+write.csv2(
+  discordance_validation_extern_stats_with_ci,
+  'manuscript/tables/egfr_discordance_validation_extern_tables_stats_with_ci.csv',
+  row.names = FALSE
+  )
+```

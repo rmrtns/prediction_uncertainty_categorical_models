@@ -1,0 +1,104 @@
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+## Load libraries.
+library(xgboost)
+library(boot)
+library(dplyr) # load after xgboost to prevent masking slice function from dplyr
+library(DT)
+```
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+## Import functions and variables.
+source('src/simulate_discordance.R', local = discordance <- new.env())
+source('src/bootstrapped_ci.R', local = bootstrapped <- new.env())
+```
+
+```{r, echo=FALSE}
+## Get input_cv.
+parameters$input_cv <- 
+  discordance$select_input_cv(
+    parameters$biological_cv, 
+    parameters$analytical_cv
+  )
+```
+
+## Simulate predictions and calculate % discordance.
+```{r, echo=FALSE}
+discordance_status <-
+  discordance$simulate_variation_induced_discordance(
+    parameters$data,
+    parameters$identifier,
+    parameters$uncertain_variables,
+    parameters$correlation,
+    parameters$input_cv,
+    parameters$simulation_number_of_samples,
+    parameters$continuous_prediction_function,
+    parameters$categorical_prediction_function,
+    model = parameters$model,
+    model_variables = parameters$model_variables,
+    model_outcome = parameters$model_outcome,
+    model_cut_off = parameters$model_cut_off
+  )
+
+write.csv(
+  discordance_status,
+  parameters$path_and_name_aggregate_results,
+  row.names = FALSE
+)
+```
+
+## Summarise results.
+
+- Histogram and QQ-plot of percentage_discordant:
+```{r, echo=FALSE}
+discordance$plot_distribution(
+  discordance_status, 
+  "percentage_discordant"
+)
+```
+
+- Summary statistics percentage_discordant with bootstrapped confidence intervals:
+
+The histograms and QQ-plots show the distribution of bootstrapped estimates and together with the bootstrap bias estimate determine the appropriateness of normal and percentile bootstrapped confidence intervals. Bias-corrected and accelerated (BCa) confidence intervals correct for bias and skewness in the distribution of bootstrapped estimates.
+
+```{r, echo=FALSE}
+bootstrapped_summary_discordant_predictions <-
+  boot(discordance_status,
+       discordance$get_summary_of_discordant_predictions_as_vector,
+       parameters$bootstrap_number_of_samples)
+
+bootstrapped_ci_discordance_status <- bootstrapped$get_bootstrapped_ci(
+  bootstrapped_summary_discordant_predictions,
+  discordance$get_variable_names_from_summary_discordant_predictions_as_vector(discordance_status), 
+  parameters$bootstrap_confidence_level, 
+  parameters$bootstrap_methods
+)
+
+write.csv(
+  bootstrapped_ci_discordance_status,
+  parameters$path_and_name_stats_with_ci,
+  row.names = FALSE
+)
+```
+
+```{r, echo=FALSE}
+datatable(
+  bootstrapped_ci_discordance_status,
+  rownames = FALSE,
+  extensions = list("FixedColumns" = NULL),
+  options = list(
+    dom = "t",
+    pageLength = 20,
+    scrollX = TRUE,
+    fixedColumns = TRUE
+  ) 
+) %>%
+  formatRound(
+    names(bootstrapped_ci_discordance_status)[-1],
+    digits = 4
+  ) %>%
+  formatStyle(
+    names(bootstrapped_ci_discordance_status),
+    lineHeight = "80%"
+  )
+```

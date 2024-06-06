@@ -1,0 +1,82 @@
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+## Load libraries.
+library(boot)
+library(tidyr)
+library(dplyr)
+```
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+## Import functions and variables.
+source('src/confusion_matrix.R', local = confusion <- new.env())
+source('src/bootstrapped_ci.R', local = bootstrapped <- new.env())
+```
+
+## Combine dataframe with measured outcome.
+```{r, echo=FALSE}
+discordance_status <- left_join(
+  parameters$original_data %>% select(
+    all_of(parameters$identifier), 
+    all_of(parameters$model_outcome)
+  ),
+  parameters$aggregate_discordance_data,
+  by = parameters$identifier) %>%
+  mutate(cv = parameters$cv_indicator) %>%
+  relocate(cv)
+```
+
+## Calculate crossover measures.
+```{r, echo=FALSE}
+crossover_measures <<-
+  confusion$calculate_crossover_within_confusion_matrix_aggregate_results(
+    discordance_status,
+    parameters$model_outcome) %>%
+  pivot_longer(cols = everything()) %>%
+  rename(!!sym(parameters$cv_indicator) := value)
+```
+
+- Crossover measures with bootstrap confidence intervals:
+```{r, echo=FALSE}
+bootstrapped_crossover <-
+  boot(discordance_status,
+       confusion$get_crossover_summary_as_vector,
+       parameters$bootstrap_number_of_samples,
+       outcome = parameters$model_outcome)
+
+bootstrapped_ci_crossover <- bootstrapped$get_bootstrapped_ci(
+  bootstrapped_crossover,
+  confusion$get_variables_names_from_crossover_summary_as_vector(
+    discordance_status,
+    parameters$model_outcome), 
+  parameters$bootstrap_confidence_level, 
+  parameters$bootstrap_methods
+)
+
+write.csv(
+  bootstrapped_ci_crossover,
+  parameters$path_and_name_stats_with_ci,
+  row.names = FALSE
+)
+```
+
+```{r, echo=FALSE}
+datatable(
+  bootstrapped_ci_crossover,
+  rownames = FALSE,
+  extensions = list("FixedColumns" = NULL),
+  options = list(
+    dom = "t",
+    pageLength = 20,
+    scrollX = TRUE,
+    fixedColumns = TRUE
+  ) 
+) %>%
+  formatRound(
+    names(bootstrapped_ci_crossover)[-1],
+    digits = 4
+  ) %>%
+  formatStyle(
+    names(bootstrapped_ci_crossover),
+    lineHeight = "80%"
+  )
+```

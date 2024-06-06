@@ -1,0 +1,88 @@
+---
+title: "Mortality: Confusion matrices based on simulations_discordance_aggregate_results for biological variation"
+output: html_document
+date: "2024-04-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(seed = 200)
+```
+
+## Load libraries.
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(DT)
+library(tidyr)
+library(purrr)
+```
+
+## Set main parameters.
+```{r}
+parameters <- new.env()
+parameters$original_data <- read.csv('data/selected_variables_egfr_validation_extern_db.csv')
+parameters$identifier <- "id"
+parameters$model_mean_continuous_prediction <- "continuous_prediction_mean"
+parameters$model_outcome <- "X1m.mortality"
+parameters$model_outcome_class_TRUE <-  "1" 
+parameters$model_prediction_class_TRUE <-  "percentage_TRUE"
+parameters$bootstrap_number_of_samples <- 10000
+parameters$bootstrap_confidence_level <- 0.95
+parameters$bootstrap_methods <- c("norm", "perc", "bca")
+parameters$path_and_name_combined_stats <- 'out/mortality/simulations_confusion_matrix_aggregate_results/mortality_confusion_matrix_validation_extern_bio_cv_combined_stats.csv'
+```
+
+```{r, echo=FALSE}
+## Create list of confusion_matrix_measures.
+list_of_confusion_matrix_measures <- list()
+```
+
+## Set parameters bio_cv_base.
+```{r}
+parameters$cv_indicator <- "bio_cv_base"
+parameters$aggregate_discordance_data <- read.csv('out/mortality/simulations_discordance_aggregate_results/mortality_discordance_validation_extern_bio_cv_base.csv')
+parameters$path_and_name_stats_with_ci <- 'out/mortality/simulations_confusion_matrix_aggregate_results/mortality_confusion_matrix_validation_extern_bio_cv_base_stats_with_ci.csv'
+```
+
+```{r, child='markdown/template_confusion_matrices.Rmd'}
+
+```
+
+```{r, echo=FALSE}
+list_of_confusion_matrix_measures[[parameters$cv_indicator]] <- 
+  confusion_matrix_measures
+remove(confusion_matrix_measures)
+```
+
+## Combined confusion matrix derived measures. 
+```{r, echo=FALSE}
+confusion_matrix_measures_combined <-
+    list_of_confusion_matrix_measures %>%
+    reduce(left_join, by = "name")
+
+write.csv(
+  confusion_matrix_measures_combined,
+  parameters$path_and_name_combined_stats,
+  row.names = FALSE
+)
+
+datatable(
+  confusion_matrix_measures_combined,
+  rownames = FALSE,
+  extensions = list("FixedColumns" = NULL),
+  options = list(
+    dom = "t",
+    pageLength = 20,
+    scrollX = TRUE,
+    fixedColumns = TRUE
+  ) 
+) %>%
+  formatRound(
+    names(confusion_matrix_measures_combined)[-1],
+    digits = 4
+  ) %>%
+  formatStyle(
+    names(confusion_matrix_measures_combined),
+    lineHeight = "80%"
+  )
+```

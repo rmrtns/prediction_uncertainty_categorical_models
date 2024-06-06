@@ -1,0 +1,124 @@
+---
+title: "Train XGBoost Model"
+output:
+  html_document: default
+date: "2023-12-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+set.seed(1)
+```
+
+## Load libraries
+```{r imports}
+library(dplyr)
+library(xgboost)
+library(pROC)
+library(ggplot2)
+library(caret)
+```
+
+## Load Train and Test Data
+- Load train and test data
+- Print their dimensions
+- Data contains top 14 variables excluding basophils because of high number of zeros
+- Data contains 10 variables with analytical error
+
+```{r}
+train_data <- read.csv('data/selected_variables_train_db.csv')
+test_data <- read.csv('data/selected_variables_test_db.csv')
+
+print(dim(train_data))
+print(dim(test_data))
+```
+
+## Estimate correlations between variables.
+```{r}
+round(cor(train_data), 2)
+```
+
+## Plot distribution and mean/median for each variable
+```{r warning=FALSE}
+train_data[train_data == 0] <- NA
+
+for (c in colnames(train_data)) {
+  if (!(c %in% c("Age", "Num_vars", "SexM", "X1m.mortality",
+                 "Time_of_presentation"))) {
+    print(sprintf("Variable: %s | Mean: %.2f | Median: %.2f",
+                  c, mean(train_data[, c], na.rm=TRUE), median(train_data[, c], na.rm=TRUE)))
+    print(
+      ggplot(data=train_data, aes(train_data[, c])) +
+      geom_histogram(aes(y=..density..), bins = 40) +
+      labs(title = c) +
+      geom_vline(aes(xintercept = mean(train_data[, c], na.rm=TRUE), 
+                     color='red'), linewidth=1) +
+      geom_vline(aes(xintercept = median(train_data[, c], na.rm=TRUE), 
+                     color='blue'), linewidth=1)
+    )
+  }
+}
+
+train_data[is.na(train_data)] <- 0
+```
+
+## Split Train and Test Data
+```{r}
+train_data_y <- train_data$X1m.mortality
+train_data_x <- train_data %>% select(-X1m.mortality)
+dtrain <- xgb.DMatrix(data = as.matrix(train_data_x), label = as.matrix(train_data_y))
+
+test_data_y <- test_data$X1m.mortality
+test_data_x <- test_data %>% select(-X1m.mortality)
+dtest <- xgb.DMatrix(data = as.matrix(test_data_x), label = test_data_y)
+
+print(length(train_data_y))
+print(dim(train_data_x))
+print(dtrain, verbose = TRUE)
+```
+
+## Train Models
+```{r}
+datasets <- list(train = dtrain, test = dtest)
+
+param <- list(
+   objective = "binary:logistic",
+   eta = 0.075,
+   max_depth = 240,
+   min_child_weight = 2,
+   subsample = 0.809,
+   lambda = 4.593e-6, 
+   alpha = 2.435e-9
+   
+)
+
+clf <- xgb.train(data = dtrain,
+                 watchlist = datasets,
+                 params = param, 
+                 nrounds = 5000, 
+                 early_stopping_rounds = 5)
+
+print(clf)
+```
+
+## Evaluate Model
+```{r}
+predictions <- predict(clf, dtest)
+CUT_OFF = 0.18 # PPV ~50% 
+
+print(head(predictions))
+print(length(predictions))
+
+roc_obj <- roc(test_data_y, predictions)
+print(auc(roc_obj))
+
+print(confusionMatrix(as.factor(as.numeric(predictions > CUT_OFF)), as.factor(test_data_y), positive='1'))
+```
+
+## Save Model
+```{r}
+xgb.save(clf,
+         sprintf("out/model/%s_xgboost.model",
+                 format(Sys.time(), "%Y_%m_%d_%H_%M")))
+```
