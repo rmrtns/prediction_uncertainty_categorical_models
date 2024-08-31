@@ -20,7 +20,7 @@ library(purrr)
 ## Set main parameters.
 ```{r}
 parameters <- new.env()
-parameters$original_data <- read.csv('data/selected_variables_egfr_validation_extern_db.csv')
+parameters$original_data <- read.csv('data/selected_variables_validation_extern_db.csv')
 parameters$identifier <- "id"
 parameters$model_mean_continuous_prediction <- "continuous_prediction_mean"
 parameters$model_outcome <- "X1m.mortality"
