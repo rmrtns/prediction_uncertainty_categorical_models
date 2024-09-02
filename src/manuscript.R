@@ -94,7 +94,7 @@ combine_stat_with_ci <- function(data, lower, upper, decimal_places){
 }
 
 
-get_plot_by_cv_level <- function(data, plot_variable, y_label, y_limits){
+get_plot_by_cv_level <- function(data, plot_variable, y_label, y_limits, breaks){
   ggplot(
     data = data %>%
       filter(variable == plot_variable),
@@ -115,6 +115,11 @@ get_plot_by_cv_level <- function(data, plot_variable, y_label, y_limits){
     ) +
     coord_cartesian(
       ylim = y_limits
+    ) +
+    scale_y_continuous(
+      breaks = seq(
+        y_limits[1], y_limits[2], (y_limits[2] - y_limits[1]) / breaks
+      )
     ) +
     labs(
       x = "Multiples of analytical variation",
