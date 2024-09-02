@@ -1,7 +1,7 @@
 ---
 title: "eGFR: Plots of discordant predictions"
 output: html_document
-date: "2024-05-30"
+date: "2024-09-02"
 ---
 
 ```{r setup, include=FALSE}
@@ -49,7 +49,8 @@ plot_discordance_p97.5 <- manuscript$get_plot_by_cv_level(
   discordance_validation_extern_stats_with_ci,
   "percentage_discordant_p97.5",
   "p97.5 of percentage discordant (%)",
-  c(0, 50)
+  c(0, 50),
+  5
 )
 
 plot_discordance_p97.5
@@ -61,7 +62,8 @@ plot_discordance_above_05 <- manuscript$get_plot_by_cv_level(
   discordance_validation_extern_stats_with_ci,
   "percentage_discordant_above_05",
   "percentage discordant >5% (%)",
-  c(0, 25)
+  c(0, 50),
+  5
 )
 
 plot_discordance_above_05
@@ -73,7 +75,8 @@ plot_probability_discordant <- manuscript$get_plot_by_cv_level(
   discordance_validation_extern_stats_with_ci,
   "probability_discordant",
   "Probability discordant prediction (%)",
-  c(0, 5)
+  c(0, 10),
+  5
 )
 
 plot_probability_discordant
