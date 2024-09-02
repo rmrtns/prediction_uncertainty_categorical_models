@@ -1,7 +1,7 @@
 ---
 title: "Mortality: Plots of discordant predictions, confusion matrices and crossover within confusion matrices"
 output: html_document
-date: "2024-05-13"
+date: "2024-09-02"
 ---
 
 ```{r setup, include=FALSE}
@@ -49,7 +49,8 @@ plot_discordance_p97.5 <- manuscript$get_plot_by_cv_level(
   discordance_validation_extern_stats_with_ci,
   "percentage_discordant_p97.5",
   "p97.5 of percentage discordant (%)",
-  c(0, 50)
+  c(0, 50),
+  5
 )
 
 plot_discordance_p97.5
@@ -61,7 +62,8 @@ plot_discordance_above_05 <- manuscript$get_plot_by_cv_level(
   discordance_validation_extern_stats_with_ci,
   "percentage_discordant_above_05",
   "percentage discordant >5% (%)",
-  c(0, 25)
+  c(0, 25),
+  5
 )
 
 plot_discordance_above_05
@@ -73,7 +75,8 @@ plot_probability_discordant <- manuscript$get_plot_by_cv_level(
   discordance_validation_extern_stats_with_ci,
   "probability_discordant",
   "Probability discordant prediction (%)",
-  c(0, 5)
+  c(0, 5),
+  5
 )
 
 plot_probability_discordant
@@ -149,7 +152,8 @@ plot_sensitivity <- manuscript$get_plot_by_cv_level(
   confusion_matrix_validation_extern_stats_with_ci,
   "sensitivity",
   "Sensitivity",
-  c(0, 0.5)
+  c(0, 0.5),
+  5
 )
 
 plot_sensitivity
@@ -161,7 +165,8 @@ plot_specificity <- manuscript$get_plot_by_cv_level(
   confusion_matrix_validation_extern_stats_with_ci,
   "specificity",
   "Specificity",
-  c(0.5, 1)
+  c(0.5, 1),
+  5
 )
 
 plot_specificity
@@ -215,7 +220,8 @@ plot_fn_minus_tp_percentage_point_diff <- manuscript$get_plot_by_cv_level(
   crossover_validation_extern_stats_with_ci,
   "fn_minus_tp_percentage_point_diff",
   "Probability discordant \nfalse negative - true positive (%)",
-  c(-1, 1)
+  c(-1, 1),
+  4
 )
 
 plot_fn_minus_tp_percentage_point_diff
@@ -227,7 +233,8 @@ plot_fp_minus_tn_percentage_point_diff <- manuscript$get_plot_by_cv_level(
   crossover_validation_extern_stats_with_ci,
   "fp_minus_tn_percentage_point_diff",
   "Probability discordant \nfalse positive - true negative (%)",
-  c(-1, 1)
+  c(-1, 1),
+  4
 )
 
 plot_fp_minus_tn_percentage_point_diff
